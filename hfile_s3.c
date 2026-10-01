@@ -2095,7 +2095,12 @@ static ssize_t s3_read(hFILE *fpv, void *bufferv, size_t nbytes) {
             got += to_copy;
             fp->last_read_buffer += to_copy;
 
-            if ((fp->buffer.l < fp->part_size) && (fp->last_read_buffer == fp->buffer.l)) {
+            // A short part means EOF.  A full part ending exactly at the known
+            // file size is also EOF; requesting another range would start at
+            // EOF and fail with a 416.
+            if (fp->last_read_buffer == fp->buffer.l
+                && (fp->buffer.l < fp->part_size
+                    || (fp->file_size >= 0 && fp->last_read >= fp->file_size))) {
                 fp->keep_going = 0;
             }
         } else {
